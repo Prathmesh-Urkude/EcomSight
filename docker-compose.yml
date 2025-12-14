@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: ecom_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:7.0
+    container_name: ecom_redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "60", "1"]
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: ecom_cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_START_RPC=0.0.0.0
+      - CASSANDRA_BROADCAST_ADDRESS=auto
+      - CASSANDRA_LISTEN_ADDRESS=auto
+
+volumes:
+  mongo-data:
