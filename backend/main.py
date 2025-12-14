@@ -90,3 +90,39 @@ def place_order(order: OrderIn, request: Request):
         cassandra_ops.log_event(it.product_id, user_id, session_id, "purchase", {"order_id": order_id, "qty": it.qty})
 
     return {"message": "order_placed", "order_id": order_id}
+
+
+@app.get("/leaderboard/top", summary="Top products by Redis leaderboard")
+def top_products(limit: int = 10):
+    items = redis_ops.get_top_products(limit)
+    return {"top_products": items}
+
+
+@app.get("/analytics/product/{product_id}/timeline", summary="Product activity timeline (Cassandra)")
+def product_timeline(
+    product_id: str,
+    start_date: Optional[str] = None,   # YYYY-MM-DD
+    end_date: Optional[str] = None,     # YYYY-MM-DD
+    limit: int = 100
+):
+    """
+    Get product activity timeline from Cassandra.
+    Query params:
+      - start_date, end_date in YYYY-MM-DD (optional; defaults to last 7 days)
+      - limit (int) max number of events to return
+    """
+    # Parse dates
+    def parse_date(s):
+        if not s:
+            return None
+        try:
+            return _dt.datetime.strptime(s, "%Y-%m-%d").date()
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"Invalid date format: {s}. Use YYYY-MM-DD")
+
+    sd = parse_date(start_date)
+    ed = parse_date(end_date)
+
+    # Use cassandra ops function
+    events = cassandra_ops.get_product_timeline(product_id, start_date=sd, end_date=ed, limit=limit)
+    return {"product_id": product_id, "events_count": len(events), "events": events}
